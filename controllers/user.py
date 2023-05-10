@@ -3,17 +3,11 @@ from flask_bcrypt import generate_password_hash, check_password_hash
 import pymysql
 from app import app
 from services.database_config import mysql
-from services.session import getIdByToken, setNewSession, removeSession
-import os
-from werkzeug.utils import secure_filename
+from services.session.session import getIdByToken, setNewSession, removeSession
 import datetime
+from services.upload_image import uploadImage
 
-fe = '127.0.0.1'
-ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif']
-
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+fe = '192.168.1.14'
 
 
 @app.route('/user/login', methods=['post'])
@@ -40,11 +34,11 @@ def login():
         if check_password_hash(password, pw) != True:
             return {}, 500
 
-        sql = "select id from user where id in (select following from follow where follower=%s)"
+        sql = "select following from follow where follower=%s"
         cursor.execute(sql, (id, ))
         followings = cursor.fetchall()
 
-        sql = "select id from user where id in (select blocked from block where blocker=%s)"
+        sql = "select blocked from block where blocker=%s"
         cursor.execute(sql, (id, ))
         blockedNames = cursor.fetchall()
 
@@ -80,6 +74,13 @@ def register():
         username = req.get('username')
         password = req.get('password')
         # print(id, username, password)
+
+        sql = "select username from user where username=%s"
+        cursor.execute(sql, (username, ))
+        user = cursor.fetchone()
+
+        if (user):
+            return {}, 500
 
         sql = "insert into user (id, username, password, money) values (%s, %s, %s, 0)"
         cursor.execute(sql, (id, username, generate_password_hash
@@ -290,24 +291,39 @@ def changeProfile():
         bio = request.form['bio']
         nickname = request.form['nickname']
 
-        if (nickname):
+        sql = "select nickname, bio from user where id=%s"
+        cursor.execute(sql, (id, ))
+        user = cursor.fetchone()
+        myNickname = user[0]
+        myBio = user[1]
+
+        if (nickname != myNickname):
+            sql = "select last_modified from user where id=%s"
+            cursor.execute(sql, (id, ))
+            last_modified = cursor.fetchone()[0]
+            if (last_modified):
+                datetimeLastModified = datetime.datetime(
+                    last_modified.year, last_modified.month, last_modified.day)
+
+                if last_modified and nickname and (datetime.datetime.now() - datetimeLastModified).days < 20:
+                    return {}, 500
             sql = "update user set nickname=%s, last_modified=%s where id=%s"
-            cursor.execute(sql, (nickname, datetime.datetime.now(), id))
+            cursor.execute(sql, (nickname,
+                                 datetime.datetime.now(), id))
             conn.commit()
 
-        if (bio):
+        if (bio != myBio):
             sql = "update user set bio=%s where id=%s"
             cursor.execute(sql, (bio, id))
             conn.commit()
 
-        if (image and allowed_file(image.filename)):
-            filename = secure_filename(image.filename)
-            image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        if (image):
+            filename = uploadImage(image)
             sql = 'update user set image=%s where id=%s'
             cursor.execute(sql, (filename, id))
             conn.commit()
 
-        return jsonify({'message': 'ok'}), 200
+        return jsonify({'image': filename}), 200
     except Exception as e:
         print(e)
         return {}, 500
@@ -327,15 +343,28 @@ def changeBio():
         bio = request.get_json().get('bio')
         nickname = request.get_json().get('nickname')
 
-        sql = "select last_modified from user where id=%s"
+        sql = "select nickname from user where id=%s"
         cursor.execute(sql, (id, ))
-        last_modified = cursor.fetchone()[0]
+        user = cursor.fetchone()
+        myNickname = user[0]
 
-        if last_modified and nickname and (datetime.datetime.now() - last_modified).days < 20:
-            return {}, 500
-        sql = "update user set bio=%s, nickname=%s, last_modified=%s where id=%s"
-        cursor.execute(sql, (bio, nickname,
-                             datetime.datetime.now(), id))
+        if nickname != myNickname:
+            sql = "select last_modified from user where id=%s"
+            cursor.execute(sql, (id, ))
+            last_modified = cursor.fetchone()[0]
+            if last_modified:
+                datetimeLastModified = datetime.datetime(
+                    last_modified.year, last_modified.month, last_modified.day)
+
+                if last_modified and nickname and (datetime.datetime.now() - datetimeLastModified).days < 20:
+                    return {}, 500
+            sql = "update user set nickname=%s, last_modified=%s where id=%s"
+            cursor.execute(sql, (nickname,
+                                 datetime.datetime.now(), id))
+            conn.commit()
+
+        sql = "update user set bio=%s where id=%s"
+        cursor.execute(sql, (bio, id))
         conn.commit()
 
         return jsonify({'message': 'ok'}), 200

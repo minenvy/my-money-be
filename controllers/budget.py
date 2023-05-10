@@ -3,7 +3,7 @@ import pymysql
 from app import app
 from services.database_config import mysql
 from dateutil import parser
-from services.session import getIdByToken
+from services.session.session import getIdByToken
 
 
 @app.route('/budget/add', methods=['post'])
@@ -53,18 +53,55 @@ def getBudget(offset):
 
         data = []
         for budget in budgets:
-            sql = 'select sum(money) from transaction where user_id=%s and money_type not in ("luong", "thunhapkhac") and created_at between %s and %s group by username'
-            cursor.execute(sql, (userId, budget[3], budget[4]))
+            sql = "select sum(money) from transaction where user_id=%s and money_type not in ('luong', 'thunhapkhac') and %s like concat('%%', money_type, '%%') and created_at between %s and %s group by user_id"
+            cursor.execute(sql, (userId, budget[5], budget[3], budget[4]))
             used_money = cursor.fetchone()
 
             data.append({
                 "id": str(budget[0]),
                 "name": str(budget[1]),
                 "money": float(budget[2]),
-                "usedMoney": float(used_money[0] if used_money else 0),
+                "usedMoney": float(used_money[0]) if used_money else 0,
                 "startDate": str(budget[3]),
                 "endDate": str(budget[4]),
                 "options": str(budget[5])
+            })
+
+        return jsonify(data), 200
+    except Exception as e:
+        print(e)
+        return jsonify([]), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/budget/get-day-expense/<string:id>', methods=['get'])
+def getDayExpense(id):
+    try:
+        conn = mysql.connect()
+        cursor = conn.cursor()
+
+        tk = request.cookies.get('token')
+        userId = getIdByToken(tk)
+        # print(username)
+
+        sql = 'select start_date, end_date, options from budget where user_id=%s and id=%s'
+        cursor.execute(sql, (userId, id))
+        budget = cursor.fetchone()
+        startDate = budget[0]
+        endDate = budget[1]
+        options = budget[2]
+
+        data = []
+        sql = "select created_at, sum(money) from transaction where user_id=%s and money_type not in ('luong', 'thunhapkhac') and %s like concat('%%', money_type, '%%') and created_at between %s and %s group by user_id, created_at"
+        cursor.execute(sql, (userId, options, startDate, endDate))
+        usedMoneyDays = cursor.fetchall()
+
+        for usedMoney in usedMoneyDays:
+            data.append({
+                "createdAt": str(usedMoney[0]),
+                "money": float(usedMoney[1]),
             })
 
         return jsonify(data), 200

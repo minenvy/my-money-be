@@ -3,7 +3,7 @@ import pymysql
 from app import app
 from services.database_config import mysql
 from dateutil import parser
-from services.session import getIdByToken
+from services.session.session import getIdByToken
 
 
 @app.route('/report/month/<int:year>', methods=['get'])

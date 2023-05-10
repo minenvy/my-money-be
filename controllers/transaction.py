@@ -3,9 +3,10 @@ import pymysql
 from app import app
 from services.database_config import mysql
 from dateutil import parser
-from services.session import getIdByToken
+from services.session.session import getIdByToken
 
 moneyInTypes = ['luong', 'thunhapkhac']
+
 
 @app.route('/transaction/add', methods=['post'])
 def add():
@@ -275,7 +276,7 @@ def getInfinite(id, offset):
         conn = mysql.connect()
         cursor = conn.cursor()
 
-        sql = 'select id, money, money_type, created_at from transaction where user_id=%s order by id desc limit 15 offset %s'
+        sql = 'select id, money, money_type, created_at from transaction where user_id=%s order by created_at desc limit 15 offset %s'
         cursor.execute(sql, (id, offset))
         transactions = cursor.fetchall()
 
