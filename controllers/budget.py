@@ -1,5 +1,4 @@
 from flask import request, request, jsonify
-import pymysql
 from app import app
 from services.database_config import mysql
 from dateutil import parser

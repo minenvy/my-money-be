@@ -13,6 +13,29 @@ def getIdByToken(tk):
             id = x
     return id
 
+def getTokenById(id):
+    tokenFile = open(
+        'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'r')
+    token = json.loads(tokenFile.read())
+    tokenFile.close()
+    token = ''
+    for x, y in token.items():
+        if x == id:
+            token = y
+    return token
+
+
+def checkSession(id):
+    tokenFile = open(
+        'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'r')
+    token = json.loads(tokenFile.read())
+    tokenFile.close()
+    isLoggedIn = False
+    for x, y in token.items():
+        if x == id:
+            isLoggedIn = True
+    return isLoggedIn
+
 
 def setNewSession(id):
     tokenFile = open(

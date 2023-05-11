@@ -1,20 +1,17 @@
 from flask import request, make_response, jsonify
 from flask_bcrypt import generate_password_hash, check_password_hash
-import pymysql
 from app import app
 from services.database_config import mysql
-from services.session.session import getIdByToken, setNewSession, removeSession
+from services.session.session import getIdByToken, setNewSession, removeSession, checkSession, getTokenById
 import datetime
 from services.upload_image import uploadImage
-
-fe = '192.168.1.14'
 
 
 @app.route('/user/login', methods=['post'])
 def login():
     try:
         conn = mysql.connect()
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor = conn.cursor()
 
         req = request.get_json()
         username = req.get('username')
@@ -25,12 +22,12 @@ def login():
         cursor.execute(sql, (username, ))
         user = cursor.fetchone()
 
-        id = user.get('id')
-        nickname = user.get('nickname')
-        password = user.get('password')
-        money = user.get('money')
-        image = user.get('image') or ''
-        bio = user.get('bio') or ''
+        id = user[0]
+        nickname = user[1]
+        password = user[2]
+        money = user[3]
+        image = user[4] or ''
+        bio = user[5] or ''
         if check_password_hash(password, pw) != True:
             return {}, 500
 
@@ -48,12 +45,18 @@ def login():
             "money": money,
             "image": image,
             "bio": bio,
-            "followings": [data['following'] for data in followings] if followings else [],
-            "blockers": [data['blocked'] for data in blockedNames] if blockedNames else []
+            "followings": [data[0] for data in followings] if followings else [],
+            "blockers": [data[0] for data in blockedNames] if blockedNames else []
         }
-        tk = setNewSession(id)
         res = make_response(jsonify(user), 200)
-        res.set_cookie('token', tk, domain=fe, httponly=True)
+        if (not checkSession(id)):
+            tk = setNewSession(id)
+            res.set_cookie(
+                'token', tk, domain=app.config['FRONTEND'], httponly=True)
+        else:
+            tk = getTokenById(id)
+            res.set_cookie(
+                'token', tk, domain=app.config['FRONTEND'], httponly=True)
         return res
     except Exception as e:
         print(e)
@@ -67,7 +70,7 @@ def login():
 def register():
     try:
         conn = mysql.connect()
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor = conn.cursor()
 
         req = request.get_json()
         id = req.get('id')
@@ -93,7 +96,8 @@ def register():
         }
         tk = setNewSession(id)
         res = make_response(jsonify(user), 200)
-        res.set_cookie('token', tk, domain=fe, httponly=True)
+        res.set_cookie(
+            'token', tk, domain=app.config['FRONTEND'], httponly=True)
         return res
     except Exception as e:
         print(e)
@@ -107,7 +111,7 @@ def register():
 def getByToken():
     try:
         conn = mysql.connect()
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor = conn.cursor()
 
         tk = request.cookies.get('token')
         id = getIdByToken(tk)
@@ -119,10 +123,10 @@ def getByToken():
         cursor.execute(sql, (id, ))
         user = cursor.fetchone()
 
-        nickname = user.get('nickname')
-        money = user.get('money')
-        image = user.get('image') or ''
-        bio = user.get('bio') or ''
+        nickname = user[0]
+        money = user[1]
+        image = user[2] or ''
+        bio = user[3] or ''
 
         sql = "select following from follow where follower=%s"
         cursor.execute(sql, (id, ))
@@ -138,8 +142,8 @@ def getByToken():
             "money": money,
             "image": image,
             "bio": bio,
-            "followings": [data['following'] for data in followings] if followings else [],
-            "blockers": [data['blocked'] for data in blockedNames] if blockedNames else []
+            "followings": [data[0] for data in followings] if followings else [],
+            "blockers": [data[0] for data in blockedNames] if blockedNames else []
         }
         res = make_response(jsonify(user), 200)
         return res
@@ -279,25 +283,27 @@ def getProposers(id, offset):
         conn.close()
 
 
-@app.route('/user/change-profile-with-avatar', methods=['post'])
-def changeProfile():
+@app.route('/user/change-profile', methods=['post'])
+def changeBio():
     try:
         conn = mysql.connect()
         cursor = conn.cursor()
 
         tk = request.cookies.get('token')
         id = getIdByToken(tk)
-        image = request.files['file']
-        bio = request.form['bio']
-        nickname = request.form['nickname']
+        req = request.get_json()
+        bio = req.get('bio')
+        nickname = req.get('nickname')
+        image = req.get('image')
 
-        sql = "select nickname, bio from user where id=%s"
+        sql = "select nickname, bio, image from user where id=%s"
         cursor.execute(sql, (id, ))
         user = cursor.fetchone()
         myNickname = user[0]
         myBio = user[1]
+        myImage = user[2]
 
-        if (nickname != myNickname):
+        if (nickname and nickname != myNickname):
             sql = "select last_modified from user where id=%s"
             cursor.execute(sql, (id, ))
             last_modified = cursor.fetchone()[0]
@@ -312,60 +318,15 @@ def changeProfile():
                                  datetime.datetime.now(), id))
             conn.commit()
 
-        if (bio != myBio):
+        if (bio and bio != myBio):
             sql = "update user set bio=%s where id=%s"
             cursor.execute(sql, (bio, id))
             conn.commit()
 
-        if (image):
-            filename = uploadImage(image)
-            sql = 'update user set image=%s where id=%s'
-            cursor.execute(sql, (filename, id))
+        if (image and image != myImage):
+            sql = "update user set image=%s where id=%s"
+            cursor.execute(sql, (image, id))
             conn.commit()
-
-        return jsonify({'image': filename}), 200
-    except Exception as e:
-        print(e)
-        return {}, 500
-    finally:
-        cursor.close()
-        conn.close()
-
-
-@app.route('/user/change-profile-without-avatar', methods=['post'])
-def changeBio():
-    try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
-        tk = request.cookies.get('token')
-        id = getIdByToken(tk)
-        bio = request.get_json().get('bio')
-        nickname = request.get_json().get('nickname')
-
-        sql = "select nickname from user where id=%s"
-        cursor.execute(sql, (id, ))
-        user = cursor.fetchone()
-        myNickname = user[0]
-
-        if nickname != myNickname:
-            sql = "select last_modified from user where id=%s"
-            cursor.execute(sql, (id, ))
-            last_modified = cursor.fetchone()[0]
-            if last_modified:
-                datetimeLastModified = datetime.datetime(
-                    last_modified.year, last_modified.month, last_modified.day)
-
-                if last_modified and nickname and (datetime.datetime.now() - datetimeLastModified).days < 20:
-                    return {}, 500
-            sql = "update user set nickname=%s, last_modified=%s where id=%s"
-            cursor.execute(sql, (nickname,
-                                 datetime.datetime.now(), id))
-            conn.commit()
-
-        sql = "update user set bio=%s where id=%s"
-        cursor.execute(sql, (bio, id))
-        conn.commit()
 
         return jsonify({'message': 'ok'}), 200
     except Exception as e:
@@ -496,6 +457,13 @@ def follow():
         followedId = req.get('id')
         isFollowed = req.get('isFollowed')
 
+        sql = 'select count(*) from follow where follower=%s'
+        cursor.execute(sql, (id, ))
+        followings = cursor.fetchone()[0]
+
+        if (followings >= 20):
+            return {}, 500
+
         if isFollowed:
             sql = "insert into follow (follower, following) values (%s, %s)"
             cursor.execute(sql, (id, followedId))
@@ -523,7 +491,8 @@ def logout():
         removeSession(id)
 
         res = make_response(jsonify({'message': 'ok'}), 200)
-        res.set_cookie('token', '', domain=fe, httponly=True, expires=0)
+        res.set_cookie(
+            'token', '', domain=app.config['FRONTEND'], httponly=True, expires=0)
         return res
     except Exception as e:
         print(e)
