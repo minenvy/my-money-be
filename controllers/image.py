@@ -1,5 +1,4 @@
 from flask import request, make_response, jsonify
-import pymysql
 from app import app
 from services.database_config import mysql
 from services.session.session import getIdByToken, setNewSession, removeSession
@@ -8,6 +7,27 @@ from services.extract_data import extract, recognizeEntity
 from datetime import datetime
 from uuid import uuid4
 import re
+
+
+@app.route('/image/upload', methods=['post'])
+def upload():
+    try:
+        conn = mysql.connect()
+        cursor = conn.cursor()
+
+        tk = request.cookies.get('token')
+        id = getIdByToken(tk)
+        image = request.files['file']
+
+        filename = uploadImage(image)
+
+        return jsonify({'image': filename}), 200
+    except Exception as e:
+        print(e)
+        return {}, 500
+    finally:
+        cursor.close()
+        conn.close()
 
 
 @app.route('/image/extract', methods=['post'])
@@ -25,7 +45,7 @@ def extractImage():
         ner = recognizeEntity(textInImage)
         money = ner.get('MONEY')
         date = ner.get('DATE')
-        note = ner.get('NOTE') or ''
+        note = '"""' + ner.get('NOTE') + '"""' or ''
 
         if money:
             money = re.sub("[^\d\.]", "", money.replace(
@@ -33,6 +53,9 @@ def extractImage():
             date = datetime.strptime(
                 date.replace('-',
                              '/'), '%d/%m/%Y') if date else datetime.now()
+            if note:
+                textsInNote = note.split()
+                note = ' '.join([str(ele) for ele in textsInNote]).replace('"""', '')
 
             sql = 'insert into draft_transaction (id, user_id, money, money_type, created_at, note) values (%s, %s, %s, %s, %s, %s)'
             cursor.execute(sql, (uuid4(), userId, money,

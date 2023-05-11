@@ -1,11 +1,8 @@
 from flask import request, request, jsonify
-import pymysql
 from app import app
 from services.database_config import mysql
 from dateutil import parser
 from services.session.session import getIdByToken
-
-moneyInTypes = ['luong', 'thunhapkhac']
 
 
 @app.route('/transaction/add', methods=['post'])
