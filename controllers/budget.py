@@ -30,6 +30,7 @@ def addBudget():
         return jsonify({'message': 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -57,13 +58,13 @@ def getBudget(offset):
             used_money = cursor.fetchone()
 
             data.append({
-                "id": str(budget[0]),
-                "name": str(budget[1]),
+                "id": budget[0],
+                "name": budget[1],
                 "money": float(budget[2]),
                 "usedMoney": float(used_money[0]) if used_money else 0,
                 "startDate": str(budget[3]),
                 "endDate": str(budget[4]),
-                "options": str(budget[5])
+                "options": budget[5]
             })
 
         return jsonify(data), 200
@@ -131,6 +132,7 @@ def deleteBudget():
         return jsonify({'message': 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return jsonify({}), 500
     finally:
         cursor.close()

@@ -5,6 +5,9 @@ from dateutil import parser
 from services.session.session import getIdByToken
 
 
+incomeTypes = ['luong', 'thunhapkhac']
+
+
 @app.route('/transaction/add', methods=['post'])
 def add():
     try:
@@ -19,9 +22,15 @@ def add():
         moneyType = req.get('type')
         note = req.get('note')
         date = parser.parse(req.get('createdAt'))
+        image = req.get('image')
 
-        sql = 'insert into transaction (id, user_id, money, money_type, created_at, note) values(%s, %s, %s, %s, %s, %s)'
-        cursor.execute(sql, (id, userId, money, moneyType, date, note))
+        sql = 'insert into transaction (id, user_id, money, money_type, created_at, note, image) values (%s, %s, %s, %s, %s, %s, %s)'
+        cursor.execute(sql, (id, userId, money, moneyType, date, note, image))
+        conn.commit()
+
+        changedMoney = money if moneyType in incomeTypes else -money
+        sql = 'update user set money=money + %s where id=%s'
+        cursor.execute(sql, (changedMoney, userId))
         conn.commit()
 
         sql = 'delete from draft_transaction where user_id=%s'
@@ -31,6 +40,7 @@ def add():
         return jsonify({"message": 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -51,14 +61,26 @@ def edit():
         moneyType = req.get('type')
         note = req.get('note')
         date = parser.parse(req.get('createdAt'))
+        image = req.get('image')
 
-        sql = 'update transaction set money=%s, money_type=%s, created_at=%s, note=%s where id=%s and user_id=%s'
-        cursor.execute(sql, (money, moneyType, date, note, id, userId))
+        sql = 'select money, money_type from transaction where id=%s'
+        cursor.execute(sql, (id, ))
+        transaction = cursor.fetchone()
+        nowMoney = transaction[0] if transaction[1] in incomeTypes else -transaction[0]
+
+        sql = 'update transaction set money=%s, money_type=%s, created_at=%s, note=%s, image=%s where id=%s and user_id=%s'
+        cursor.execute(sql, (money, moneyType, date, note, image, id, userId))
+        conn.commit()
+
+        changedMoney = money if moneyType in incomeTypes else -money
+        sql = 'update user set money=money + %s where id=%s'
+        cursor.execute(sql, (changedMoney - nowMoney, userId))
         conn.commit()
 
         return jsonify({"message": 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -75,7 +97,15 @@ def delete():
         userId = getIdByToken(tk)
         req = request.get_json()
         id = req.get('id')
-        # print(username)
+
+        sql = 'select money, money_type from transaction where id=%s'
+        cursor.execute(sql, (id, ))
+        transaction = cursor.fetchone()
+        nowMoney = transaction[0] if transaction[1] in incomeTypes else -transaction[0]
+
+        sql = 'update user set money=money + %s where id=%s'
+        cursor.execute(sql, (- nowMoney, userId))
+        conn.commit()
 
         sql = 'delete from transaction where id=%s and user_id=%s'
         cursor.execute(sql, (id, userId))
@@ -84,6 +114,7 @@ def delete():
         return jsonify({"message": 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -106,7 +137,7 @@ def getInMonth(month, year):
         data = []
         for transaction in transactions:
             data.append({
-                "type": str(transaction[0]),
+                "type": transaction[0],
                 "money": float(transaction[1]),
             })
 
@@ -128,18 +159,19 @@ def getSeparateInMonth(month, year):
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
         # print(month, year, username)
-        sql = 'select id, money, money_type, created_at, note from transaction where month(created_at)=%s and year(created_at)=%s and user_id=%s order by day(created_at) desc, money_type'
+        sql = 'select id, money, money_type, created_at, note, image from transaction where month(created_at)=%s and year(created_at)=%s and user_id=%s order by day(created_at) desc, money_type'
         cursor.execute(sql, (month, year, userId))
         transactions = cursor.fetchall()
 
         data = []
         for transaction in transactions:
             data.append({
-                "id": str(transaction[0]),
+                "id": transaction[0],
                 "money": float(transaction[1]),
-                "type": str(transaction[2]),
+                "type": transaction[2],
                 "createdAt": str(transaction[3]),
-                "note": str(transaction[4] or '')
+                "note": transaction[4] or '',
+                "image": transaction[5] or ''
             })
 
         return jsonify(data), 200
@@ -166,40 +198,8 @@ def getInYear(year):
         data = []
         for transaction in transactions:
             data.append({
-                "type": str(transaction[0]),
+                "type": transaction[0],
                 "money": float(transaction[1]),
-            })
-        return jsonify(data), 200
-    except Exception as e:
-        print(e)
-        return jsonify([]), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-
-@app.route('/transaction/get-in-five-year/<int:year>', methods=['get'])
-def getInFiveYear(year):
-    try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
-        tk = request.cookies.get('token')
-        userId = getIdByToken(tk)
-        yearsAgo = year - 5
-        # print(year)
-        sql = 'select id, money, money_type, created_at, note from transaction where year(created_at) between %s and %s and user_id=%s'
-        cursor.execute(sql, (yearsAgo, year, userId))
-        transactions = cursor.fetchall()
-
-        data = []
-        for transaction in transactions:
-            data.append({
-                "id": str(transaction[0]),
-                "money": float(transaction[1]),
-                "type": str(transaction[2]),
-                "createdAt": str(transaction[3]),
-                "note": str(transaction[4] or '')
             })
         return jsonify(data), 200
     except Exception as e:
@@ -219,18 +219,19 @@ def recent():
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
-        sql = 'select id, money, money_type, created_at, note from transaction where user_id=%s order by id desc limit 3'
+        sql = 'select id, money, money_type, created_at, note, image from transaction where user_id=%s order by id desc limit 3'
         cursor.execute(sql, (userId, ))
         transactions = cursor.fetchall()
 
         data = []
         for transaction in transactions:
             data.append({
-                "id": str(transaction[0]),
+                "id": transaction[0],
                 "money": float(transaction[1]),
-                "type": str(transaction[2]),
+                "type": transaction[2],
                 "createdAt": str(transaction[3]),
-                "note": str(transaction[4] or '')
+                "note": transaction[4] or '',
+                "image": transaction[5] or ''
             })
         return jsonify(data), 200
     except Exception as e:
@@ -247,16 +248,17 @@ def getById(id):
         conn = mysql.connect()
         cursor = conn.cursor()
 
-        sql = 'select id, money, money_type, created_at, note from transaction where id=%s'
+        sql = 'select id, money, money_type, created_at, note, image from transaction where id=%s'
         cursor.execute(sql, (id, ))
         data = cursor.fetchone()
 
         transaction = {
-            "id": str(data[0]),
+            "id": data[0],
             "money": float(data[1]),
-            "type": str(data[2]),
+            "type": data[2],
             "createdAt": str(data[3]),
-            "note": str(data[4] or '')
+            "note": data[4] or '',
+            "image": data[5] or ''
         }
         return jsonify(transaction), 200
     except Exception as e:
@@ -280,9 +282,9 @@ def getInfinite(id, offset):
         data = []
         for transaction in transactions:
             data.append({
-                "id": str(transaction[0]),
+                "id": transaction[0],
                 "money": float(transaction[1]),
-                "type": str(transaction[2]),
+                "type": transaction[2],
                 "createdAt": str(transaction[3]),
             })
         return jsonify(data), 200
@@ -303,22 +305,24 @@ def getDraft():
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
-        sql = 'select id, money, money_type, created_at, note from draft_transaction where user_id=%s'
+        sql = 'select id, money, money_type, created_at, note, image from draft_transaction where user_id=%s'
         cursor.execute(sql, (userId, ))
         drafts = cursor.fetchall()
 
         data = []
         for draft in drafts:
             data.append({
-                "id": str(draft[0]),
+                "id": draft[0],
                 "money": float(draft[1]),
-                "type": str(draft[2]),
+                "type": draft[2],
                 "createdAt": str(draft[3]),
-                "note": str(draft[4] or '')
+                "note": draft[4] or '',
+                "image": draft[5] or ''
             })
         return jsonify(data), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return jsonify([]), 500
     finally:
         cursor.close()

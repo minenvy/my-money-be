@@ -45,26 +45,26 @@ def extractImage():
         ner = recognizeEntity(textInImage)
         money = ner.get('MONEY')
         date = ner.get('DATE')
-        note = '"""' + ner.get('NOTE') + '"""' or ''
+        note = '"""' + ner.get('NOTE') + '"""'
 
-        if money:
-            money = re.sub("[^\d\.]", "", money.replace(
-                'o', '0').replace('O', '0'))
-            date = datetime.strptime(
-                date.replace('-',
-                             '/'), '%d/%m/%Y') if date else datetime.now()
-            if note:
-                textsInNote = note.split()
-                note = ' '.join([str(ele) for ele in textsInNote]).replace('"""', '')
+        money = re.sub("[^\d\.]", "", money.replace(
+            'o', '0').replace('O', '0')) if money else 0
+        date = datetime.strptime(
+            date.replace('-',
+                         '/'), '%d/%m/%Y') if date else datetime.now()
 
-            sql = 'insert into draft_transaction (id, user_id, money, money_type, created_at, note) values (%s, %s, %s, %s, %s, %s)'
-            cursor.execute(sql, (uuid4(), userId, money,
-                           'banking', date, note))
-            conn.commit()
+        textsInNote = note.split() if note else ''
+        note = ' '.join([str(ele) for ele in textsInNote]).replace('"""', '')
+
+        sql = 'insert into draft_transaction (id, user_id, money, money_type, created_at, note, image) values (%s, %s, %s, %s, %s, %s, %s)'
+        cursor.execute(sql, (uuid4(), userId, money,
+                             'banking', date, note, filename))
+        conn.commit()
 
         return jsonify({'message': 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()

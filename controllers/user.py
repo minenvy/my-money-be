@@ -101,6 +101,7 @@ def register():
         return res
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -331,6 +332,7 @@ def changeBio():
         return jsonify({'message': 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -363,6 +365,7 @@ def changePassword():
         return jsonify({'message': 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -387,6 +390,7 @@ def changeMoney():
         return jsonify({'message': 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -439,6 +443,7 @@ def block():
         return jsonify({'message': 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -476,6 +481,7 @@ def follow():
         return jsonify({'message': 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
