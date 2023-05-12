@@ -5,10 +5,10 @@ import json
 def getIdByToken(tk):
     tokenFile = open(
         'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'r')
-    token = json.loads(tokenFile.read())
+    tokens = json.loads(tokenFile.read())
     tokenFile.close()
     id = None
-    for x, y in token.items():
+    for x, y in tokens.items():
         if y == tk:
             id = x
     return id
@@ -16,10 +16,10 @@ def getIdByToken(tk):
 def getTokenById(id):
     tokenFile = open(
         'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'r')
-    token = json.loads(tokenFile.read())
+    tokens = json.loads(tokenFile.read())
     tokenFile.close()
     token = ''
-    for x, y in token.items():
+    for x, y in tokens.items():
         if x == id:
             token = y
     return token
@@ -28,10 +28,10 @@ def getTokenById(id):
 def checkSession(id):
     tokenFile = open(
         'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'r')
-    token = json.loads(tokenFile.read())
+    tokens = json.loads(tokenFile.read())
     tokenFile.close()
     isLoggedIn = False
-    for x, y in token.items():
+    for x, y in tokens.items():
         if x == id:
             isLoggedIn = True
     return isLoggedIn
@@ -40,14 +40,14 @@ def checkSession(id):
 def setNewSession(id):
     tokenFile = open(
         'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'r')
-    token = json.loads(tokenFile.read())
+    tokens = json.loads(tokenFile.read())
     tokenFile.close()
 
     tokenFile = open(
         'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'w')
     tk = str(uuid1())
-    token[id] = tk
-    tokenFile.write(json.dumps(token))
+    tokens[id] = tk
+    tokenFile.write(json.dumps(tokens))
     tokenFile.close()
     return tk
 
@@ -57,12 +57,12 @@ def removeSession(id):
         return
     tokenFile = open(
         'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'r')
-    token = json.loads(tokenFile.read())
+    tokens = json.loads(tokenFile.read())
     tokenFile.close()
 
     tokenFile = open(
         'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'w')
     tk = str(uuid1())
-    token.pop(id)
-    tokenFile.write(json.dumps(token))
+    tokens.pop(id)
+    tokenFile.write(json.dumps(tokens))
     tokenFile.close()

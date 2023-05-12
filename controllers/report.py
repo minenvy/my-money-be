@@ -24,7 +24,7 @@ def reportMonth(year):
             data[i] = []
             for transaction in transactions:
                 data[i].append({
-                    "type": str(transaction[0]),
+                    "type": transaction[0],
                     "money": float(transaction[1]),
                 })
 
@@ -56,7 +56,7 @@ def reportYear(year):
             data[year - i] = []
             for transaction in transactions:
                 data[year - i].append({
-                    "type": str(transaction[0]),
+                    "type": transaction[0],
                     "money": float(transaction[1]),
                 })
 
