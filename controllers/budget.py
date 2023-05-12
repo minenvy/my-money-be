@@ -30,6 +30,7 @@ def addBudget():
         return jsonify({'message': 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -131,6 +132,7 @@ def deleteBudget():
         return jsonify({'message': 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return jsonify({}), 500
     finally:
         cursor.close()

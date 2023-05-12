@@ -5,6 +5,9 @@ from dateutil import parser
 from services.session.session import getIdByToken
 
 
+incomeTypes = ['luong', 'thunhapkhac']
+
+
 @app.route('/transaction/add', methods=['post'])
 def add():
     try:
@@ -25,6 +28,11 @@ def add():
         cursor.execute(sql, (id, userId, money, moneyType, date, note, image))
         conn.commit()
 
+        changedMoney = money if moneyType in incomeTypes else -money
+        sql = 'update user set money=money + %s where id=%s'
+        cursor.execute(sql, (changedMoney, userId))
+        conn.commit()
+
         sql = 'delete from draft_transaction where user_id=%s'
         cursor.execute(sql, (userId, ))
         conn.commit()
@@ -32,6 +40,7 @@ def add():
         return jsonify({"message": 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -54,13 +63,24 @@ def edit():
         date = parser.parse(req.get('createdAt'))
         image = req.get('image')
 
+        sql = 'select money, money_type from transaction where id=%s'
+        cursor.execute(sql, (id, ))
+        transaction = cursor.fetchone()
+        nowMoney = transaction[0] if transaction[1] in incomeTypes else -transaction[0]
+
         sql = 'update transaction set money=%s, money_type=%s, created_at=%s, note=%s, image=%s where id=%s and user_id=%s'
         cursor.execute(sql, (money, moneyType, date, note, image, id, userId))
+        conn.commit()
+
+        changedMoney = money if moneyType in incomeTypes else -money
+        sql = 'update user set money=money + %s where id=%s'
+        cursor.execute(sql, (changedMoney - nowMoney, userId))
         conn.commit()
 
         return jsonify({"message": 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -77,7 +97,15 @@ def delete():
         userId = getIdByToken(tk)
         req = request.get_json()
         id = req.get('id')
-        # print(username)
+
+        sql = 'select money, money_type from transaction where id=%s'
+        cursor.execute(sql, (id, ))
+        transaction = cursor.fetchone()
+        nowMoney = transaction[0] if transaction[1] in incomeTypes else -transaction[0]
+
+        sql = 'update user set money=money + %s where id=%s'
+        cursor.execute(sql, (- nowMoney, userId))
+        conn.commit()
 
         sql = 'delete from transaction where id=%s and user_id=%s'
         cursor.execute(sql, (id, userId))
@@ -86,6 +114,7 @@ def delete():
         return jsonify({"message": 'ok'}), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return {}, 500
     finally:
         cursor.close()
@@ -293,6 +322,7 @@ def getDraft():
         return jsonify(data), 200
     except Exception as e:
         print(e)
+        conn.rollback()
         return jsonify([]), 500
     finally:
         cursor.close()
