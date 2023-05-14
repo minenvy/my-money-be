@@ -1,4 +1,4 @@
-from uuid import uuid1
+from uuid import uuid4
 import json
 
 
@@ -45,7 +45,7 @@ def setNewSession(id):
 
     tokenFile = open(
         'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'w')
-    tk = str(uuid1())
+    tk = str(uuid4())
     tokens[id] = tk
     tokenFile.write(json.dumps(tokens))
     tokenFile.close()
@@ -62,7 +62,6 @@ def removeSession(id):
 
     tokenFile = open(
         'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'w')
-    tk = str(uuid1())
     tokens.pop(id)
     tokenFile.write(json.dumps(tokens))
     tokenFile.close()

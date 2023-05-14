@@ -215,7 +215,7 @@ def getFollowers(id):
                 "image": follower[2] or '',
                 "bio": follower[3] or '',
             })
-        print(data)
+
         res = jsonify(data), 200
         return res
     except Exception as e:
@@ -467,7 +467,14 @@ def follow():
         followings = cursor.fetchone()[0]
 
         if (followings >= 20):
-            return {}, 500
+            return jsonify({'message': 'max your followers'}), 500
+
+        sql = 'select count(*) from follow where following=%s'
+        cursor.execute(sql, (id, ))
+        followers = cursor.fetchone()[0]
+
+        if (followers >= 50):
+            return jsonify({'message': 'max your friend followers'}), 500
 
         if isFollowed:
             sql = "insert into follow (follower, following) values (%s, %s)"
