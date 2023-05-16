@@ -23,9 +23,11 @@ def add():
         note = req.get('note')
         date = parser.parse(req.get('createdAt'))
         image = req.get('image')
+        permission = req.get('accessPermission')
 
-        sql = 'insert into transaction (id, user_id, money, money_type, created_at, note, image) values (%s, %s, %s, %s, %s, %s, %s)'
-        cursor.execute(sql, (id, userId, money, moneyType, date, note, image))
+        sql = 'insert into transaction (id, user_id, money, money_type, created_at, note, image, access_permission) values (%s, %s, %s, %s, %s, %s, %s, %s)'
+        cursor.execute(sql, (id, userId, money, moneyType,
+                       date, note, image, permission))
         conn.commit()
 
         changedMoney = money if moneyType in incomeTypes else -money
@@ -62,14 +64,16 @@ def edit():
         note = req.get('note')
         date = parser.parse(req.get('createdAt'))
         image = req.get('image')
+        permission = req.get('accessPermission')
 
         sql = 'select money, money_type from transaction where id=%s'
         cursor.execute(sql, (id, ))
         transaction = cursor.fetchone()
         nowMoney = transaction[0] if transaction[1] in incomeTypes else -transaction[0]
 
-        sql = 'update transaction set money=%s, money_type=%s, created_at=%s, note=%s, image=%s where id=%s and user_id=%s'
-        cursor.execute(sql, (money, moneyType, date, note, image, id, userId))
+        sql = 'update transaction set money=%s, money_type=%s, created_at=%s, note=%s, image=%s, access_permission=%s where id=%s and user_id=%s'
+        cursor.execute(sql, (money, moneyType, date, note,
+                       image, permission, id, userId))
         conn.commit()
 
         changedMoney = money if moneyType in incomeTypes else -money
@@ -275,8 +279,8 @@ def getInfinite(id, offset):
         conn = mysql.connect()
         cursor = conn.cursor()
 
-        sql = 'select id, money, money_type, created_at from transaction where user_id=%s order by created_at desc limit 15 offset %s'
-        cursor.execute(sql, (id, offset))
+        sql = 'select id, money, money_type, created_at from transaction where user_id=%s and access_permission=%s order by created_at desc limit 15 offset %s'
+        cursor.execute(sql, (id, 'public', offset))
         transactions = cursor.fetchall()
 
         data = []

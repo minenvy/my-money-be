@@ -56,9 +56,9 @@ def extractImage():
         textsInNote = note.split() if note else ''
         note = ' '.join([str(ele) for ele in textsInNote]).replace('"""', '')
 
-        sql = 'insert into draft_transaction (id, user_id, money, money_type, created_at, note, image) values (%s, %s, %s, %s, %s, %s, %s)'
+        sql = 'insert into draft_transaction (id, user_id, money, money_type, created_at, note, image, access_permission) values (%s, %s, %s, %s, %s, %s, %s, %s)'
         cursor.execute(sql, (uuid4(), userId, money,
-                             'banking', date, note, filename))
+                             'banking', date, note, filename, 'private'))
         conn.commit()
 
         return jsonify({'message': 'ok'}), 200
