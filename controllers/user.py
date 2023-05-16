@@ -255,6 +255,35 @@ def getFollowings(id):
         conn.close()
 
 
+@app.route('/user/get-proposers/<string:id>/<int:offset>/<string:search>', methods=['get'])
+def getSearchProposers(id, offset, search):
+    try:
+        conn = mysql.connect()
+        cursor = conn.cursor()
+
+        sql = "select id, nickname, image, bio from user where nickname is not null and nickname like concat('%%', %s, '%%') and id!=%s and id not in (select following from follow where follower=%s) and id not in (select follower from follow where following=%s) limit 15 offset %s"
+        cursor.execute(sql, (search, id, id, id, offset))
+        proposers = cursor.fetchall()
+
+        data = []
+        for proposer in proposers:
+            data.append({
+                "id": proposer[0],
+                "nickname": proposer[1],
+                "image": proposer[2] or '',
+                "bio": proposer[3] or '',
+            })
+
+        res = jsonify(data), 200
+        return res
+    except Exception as e:
+        print(e)
+        return jsonify([]), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
 @app.route('/user/get-proposers/<string:id>/<int:offset>', methods=['get'])
 def getProposers(id, offset):
     try:
@@ -407,10 +436,16 @@ def checkBlock(id):
         userId = getIdByToken(tk)
 
         sql = "select blocked from block where blocker=%s"
-        cursor.execute(sql, (userId, ))
+        cursor.execute(sql, (id, ))
         blockedNames = cursor.fetchall()
 
-        return jsonify({'isBlocked': True if blockedNames and id in blockedNames else False}), 200
+        isBlocked = False
+        for blockedName in blockedNames:
+            if blockedName[0] == userId:
+                isBlocked = True
+                break
+
+        return jsonify({'isBlocked': isBlocked}), 200
     except Exception as e:
         print(e)
         return {}, 500

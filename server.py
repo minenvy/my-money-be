@@ -8,4 +8,4 @@ import controllers.socket
 import controllers.notification
 
 if __name__ == '__main__':
-    socketio.run(app, port='5000')
+    socketio.run(app, host=app.config['FRONTEND'], port='5000')
