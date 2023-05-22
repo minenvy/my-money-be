@@ -13,7 +13,6 @@ def reportMonth(year):
 
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
-        # print(username)
 
         data = {}
         for i in range(1, 13):
@@ -31,7 +30,7 @@ def reportMonth(year):
         return jsonify(data), 200
     except Exception as e:
         print(e)
-        return {}, 500
+        return jsonify({"message": 'Lấy thông tin báo cáo thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -45,7 +44,6 @@ def reportYear(year):
 
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
-        # print(username)
 
         data = {}
         for i in range(5):
@@ -63,7 +61,7 @@ def reportYear(year):
         return jsonify(data), 200
     except Exception as e:
         print(e)
-        return {}, 500
+        return jsonify({"message": 'Lấy thông tin báo cáo thất bại'}), 500
     finally:
         cursor.close()
         conn.close()

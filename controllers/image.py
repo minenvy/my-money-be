@@ -21,10 +21,10 @@ def upload():
 
         filename = uploadImage(image)
 
-        return jsonify({'image': filename}), 200
+        return jsonify({"message": 'Upload ảnh thành công', "image": filename}), 200
     except Exception as e:
         print(e)
-        return {}, 500
+        return jsonify({"message": 'Upload ảnh thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -61,11 +61,11 @@ def extractImage():
                              'banking', date, note, filename, 'private'))
         conn.commit()
 
-        return jsonify({'message': 'ok'}), 200
+        return jsonify({'message': 'Trích xuất ảnh thành công'}), 200
     except Exception as e:
         print(e)
         conn.rollback()
-        return {}, 500
+        return jsonify({"message": 'Trích xuất ảnh thất bại'}), 500
     finally:
         cursor.close()
         conn.close()

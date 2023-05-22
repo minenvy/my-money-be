@@ -20,6 +20,5 @@ def recognizeEntity(text):
     ner = {}
 
     for ent in doc.ents:
-        # print(ent.text, ent.label_)
         ner[ent.label_] = ent.text
     return ner

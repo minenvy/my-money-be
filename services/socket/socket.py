@@ -1,12 +1,15 @@
 import json
 
 
+SocketFile = 'D:\WorkSpace\my-money\\backend\services\socket\socket.txt'
+
+
 def getIdfromSocketId(sid):
-    socketFile = open(
-        'D:\WorkSpace\my-money\\backend\services\socket\socket.txt', 'r')
-    sockets = json.loads(socketFile.read())
+    socketFile = open(SocketFile, 'r')
+    jsonData = socketFile.read()
+    sockets = json.loads(jsonData) if jsonData else {}
     socketFile.close()
-    id = None
+    id = ''
     for x, y in sockets.items():
         if y == sid:
             id = x
@@ -14,9 +17,9 @@ def getIdfromSocketId(sid):
 
 
 def getSocketIdfromId(id):
-    socketFile = open(
-        'D:\WorkSpace\my-money\\backend\services\socket\socket.txt', 'r')
-    sockets = json.loads(socketFile.read())
+    socketFile = open(SocketFile, 'r')
+    jsonData = socketFile.read()
+    sockets = json.loads(jsonData) if jsonData else {}
     socketFile.close()
     sid = ''
     for x, y in sockets.items():
@@ -27,9 +30,9 @@ def getSocketIdfromId(id):
 
 
 def checkSocketSession(id):
-    socketFile = open(
-        'D:\WorkSpace\my-money\\backend\services\socket\socket.txt', 'r')
-    sockets = json.loads(socketFile.read())
+    socketFile = open(SocketFile, 'r')
+    jsonData = socketFile.read()
+    sockets = json.loads(jsonData) if jsonData else {}
     socketFile.close()
     isConnected = False
     for x, y in sockets.items():
@@ -39,13 +42,12 @@ def checkSocketSession(id):
 
 
 def setNewSocketSession(id, sid):
-    socketFile = open(
-        'D:\WorkSpace\my-money\\backend\services\socket\socket.txt', 'r')
-    sockets = json.loads(socketFile.read())
+    socketFile = open(SocketFile, 'r')
+    jsonData = socketFile.read()
+    sockets = json.loads(jsonData) if jsonData else {}
     socketFile.close()
 
-    socketFile = open(
-        'D:\WorkSpace\my-money\\backend\services\socket\socket.txt', 'w')
+    socketFile = open(SocketFile, 'w')
     sockets[id] = sid
     socketFile.write(json.dumps(sockets))
     socketFile.close()
@@ -54,13 +56,12 @@ def setNewSocketSession(id, sid):
 def removeSocketSession(id):
     if (not id):
         return
-    socketFile = open(
-        'D:\WorkSpace\my-money\\backend\services\socket\socket.txt', 'r')
-    sockets = json.loads(socketFile.read())
+    socketFile = open(SocketFile, 'r')
+    jsonData = socketFile.read()
+    sockets = json.loads(jsonData) if jsonData else {}
     socketFile.close()
 
-    socketFile = open(
-        'D:\WorkSpace\my-money\\backend\services\socket\socket.txt', 'w')
+    socketFile = open(SocketFile, 'w')
     sockets.pop(id)
     socketFile.write(json.dumps(sockets))
     socketFile.close()

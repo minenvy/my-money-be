@@ -39,7 +39,7 @@ def getInfiniteNotification(id, offset):
         return jsonify(data), 200
     except Exception as e:
         print(e)
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin thông báo thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -58,11 +58,11 @@ def readNotification():
         cursor.execute(sql, ('read', id))
         conn.commit()
 
-        return jsonify({"message": "ok"}), 200
+        return jsonify({"message": "Đã đọc thông báo"}), 200
     except Exception as e:
         print(e)
         conn.rollback()
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()

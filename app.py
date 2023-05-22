@@ -12,5 +12,6 @@ app.config['SECRET_KEY'] = 'My Money v1'
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['FRONTEND'] = '127.0.0.1'
+app.config['port'] = '5000'
 
 socketio = SocketIO(app, cors_allowed_origins='*')

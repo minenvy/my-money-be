@@ -20,18 +20,17 @@ def addBudget():
         startDate = parser.parse(req.get('startDate'))
         endDate = parser.parse(req.get('endDate'))
         options = req.get('options')
-        # print(username)
 
         sql = 'insert into budget (id, user_id, name, money, start_date, end_date, options) values (%s, %s, %s, %s, %s, %s, %s)'
         cursor.execute(sql, (id, userId, name, money,
                        startDate, endDate, options))
         conn.commit()
 
-        return jsonify({'message': 'ok'}), 200
+        return jsonify({'message': 'Thêm ngân sách thành công'}), 200
     except Exception as e:
         print(e)
         conn.rollback()
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -45,7 +44,6 @@ def getBudget(offset):
 
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
-        # print(username)
 
         sql = 'select id, name, money, start_date, end_date, options from budget where user_id=%s limit 15 offset %s'
         cursor.execute(sql, (userId, offset))
@@ -70,7 +68,7 @@ def getBudget(offset):
         return jsonify(data), 200
     except Exception as e:
         print(e)
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin ngân sách thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -84,7 +82,6 @@ def getDayExpense(id):
 
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
-        # print(username)
 
         sql = 'select start_date, end_date, options from budget where user_id=%s and id=%s'
         cursor.execute(sql, (userId, id))
@@ -107,7 +104,7 @@ def getDayExpense(id):
         return jsonify(data), 200
     except Exception as e:
         print(e)
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin chi tiêu trong ngân sách thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
