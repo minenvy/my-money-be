@@ -16,11 +16,13 @@ def login():
         req = request.get_json()
         username = req.get('username')
         pw = req.get('password')
-        # print(username, pw)
 
         sql = "select id, nickname, password, money, image, bio from user where username=%s"
         cursor.execute(sql, (username, ))
         user = cursor.fetchone()
+
+        if (not user):
+            return jsonify({"message": 'Tài khoản không tồn tại'}), 400
 
         id = user[0]
         nickname = user[1]
@@ -29,7 +31,7 @@ def login():
         image = user[4] or ''
         bio = user[5] or ''
         if check_password_hash(password, pw) != True:
-            return {}, 500
+            return jsonify({"message": 'Mật khẩu không chính xác'}), 400
 
         sql = "select following from follow where follower=%s"
         cursor.execute(sql, (id, ))
@@ -60,7 +62,7 @@ def login():
         return res
     except Exception as e:
         print(e)
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -76,14 +78,13 @@ def register():
         id = req.get('id')
         username = req.get('username')
         password = req.get('password')
-        # print(id, username, password)
 
         sql = "select username from user where username=%s"
         cursor.execute(sql, (username, ))
         user = cursor.fetchone()
 
         if (user):
-            return {}, 500
+            return jsonify({"message": 'Tài khoản đã được sử dụng'}), 400
 
         sql = "insert into user (id, username, password, money) values (%s, %s, %s, 0)"
         cursor.execute(sql, (id, username, generate_password_hash
@@ -102,7 +103,7 @@ def register():
     except Exception as e:
         print(e)
         conn.rollback()
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -118,7 +119,7 @@ def getByToken():
         id = getIdByToken(tk)
 
         if (not id):
-            return {}, 200
+            return jsonify({"message": 'Lấy thông tin người dùng thất bại'}), 400
 
         sql = "select nickname, money, image, bio from user where id=%s"
         cursor.execute(sql, (id, ))
@@ -150,7 +151,7 @@ def getByToken():
         return res
     except Exception as e:
         print(e)
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -191,7 +192,7 @@ def getByUsername(id):
         return res
     except Exception as e:
         print(e)
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -202,6 +203,16 @@ def getFollowers(id):
     try:
         conn = mysql.connect()
         cursor = conn.cursor()
+
+        tk = request.cookies.get('token')
+        userId = getIdByToken(tk)
+
+        sql = "select following from follow where follower=%s"
+        cursor.execute(sql, (userId, ))
+        followingsTuple = cursor.fetchall()
+        followings = []
+        for following in followingsTuple:
+            followings.append(following[0])
 
         sql = "select id, nickname, image, bio from user where id in (select follower from follow where following=%s)"
         cursor.execute(sql, (id, ))
@@ -214,13 +225,14 @@ def getFollowers(id):
                 "nickname": follower[1],
                 "image": follower[2] or '',
                 "bio": follower[3] or '',
+                "isFollowed": True if follower[0] in followings else False
             })
 
         res = jsonify(data), 200
         return res
     except Exception as e:
         print(e)
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin follow thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -243,13 +255,14 @@ def getFollowings(id):
                 "nickname": following[1],
                 "image": following[2] or '',
                 "bio": following[3] or '',
+                "isFollowed": True
             })
 
         res = jsonify(data), 200
         return res
     except Exception as e:
         print(e)
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin follow thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -261,8 +274,11 @@ def getSearchProposers(id, offset, search):
         conn = mysql.connect()
         cursor = conn.cursor()
 
-        sql = "select id, nickname, image, bio from user where nickname is not null and nickname like concat('%%', %s, '%%') and id!=%s and id not in (select following from follow where follower=%s) and id not in (select follower from follow where following=%s) limit 15 offset %s"
-        cursor.execute(sql, (search, id, id, id, offset))
+        tk = request.cookies.get('token')
+        userId = getIdByToken(tk)
+
+        sql = "select id, nickname, image, bio from user where nickname is not null and nickname like concat('%%', %s, '%%') and id!=%s and id not in (select following from follow where follower=%s) and id not in (select follower from follow where following=%s) and id not in (select blocker from block where blocked=%s) limit 15 offset %s"
+        cursor.execute(sql, (search, id, id, id, userId, offset))
         proposers = cursor.fetchall()
 
         data = []
@@ -272,13 +288,14 @@ def getSearchProposers(id, offset, search):
                 "nickname": proposer[1],
                 "image": proposer[2] or '',
                 "bio": proposer[3] or '',
+                "isFollowed": False
             })
 
         res = jsonify(data), 200
         return res
     except Exception as e:
         print(e)
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin bạn đề xuất thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -290,8 +307,11 @@ def getProposers(id, offset):
         conn = mysql.connect()
         cursor = conn.cursor()
 
-        sql = "select id, nickname, image, bio from user where nickname is not null and id!=%s and id not in (select following from follow where follower=%s) and id not in (select follower from follow where following=%s) limit 15 offset %s"
-        cursor.execute(sql, (id, id, id, offset))
+        tk = request.cookies.get('token')
+        userId = getIdByToken(tk)
+
+        sql = "select id, nickname, image, bio from user where nickname is not null and id!=%s and id not in (select following from follow where follower=%s) and id not in (select follower from follow where following=%s) and id not in (select blocker from block where blocked=%s) limit 15 offset %s"
+        cursor.execute(sql, (id, id, id, userId, offset))
         proposers = cursor.fetchall()
 
         data = []
@@ -301,13 +321,14 @@ def getProposers(id, offset):
                 "nickname": proposer[1],
                 "image": proposer[2] or '',
                 "bio": proposer[3] or '',
+                "isFollowed": False
             })
 
         res = jsonify(data), 200
         return res
     except Exception as e:
         print(e)
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin bạn đề xuất thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -333,16 +354,23 @@ def changeBio():
         myBio = user[1]
         myImage = user[2]
 
-        if (nickname and nickname != myNickname):
-            sql = "select last_modified from user where id=%s"
-            cursor.execute(sql, (id, ))
-            last_modified = cursor.fetchone()[0]
-            if (last_modified):
-                datetimeLastModified = datetime.datetime(
-                    last_modified.year, last_modified.month, last_modified.day)
+        sql = 'select count(*) from user where nickname=%s'
+        cursor.execute(sql, (nickname, ))
+        isExistNickname = cursor.fetchone()[0] > 0
+        if isExistNickname:
+            return jsonify({ "message": 'Tên người dùng đã tồn tại' }), 400
 
-                if last_modified and nickname and (datetime.datetime.now() - datetimeLastModified).days < 20:
-                    return {}, 500
+        if (nickname and nickname != myNickname):
+            if myNickname:
+                sql = "select last_modified from user where id=%s"
+                cursor.execute(sql, (id, ))
+                last_modified = cursor.fetchone()[0]
+                if (last_modified):
+                    datetimeLastModified = datetime.datetime(
+                        last_modified.year, last_modified.month, last_modified.day)
+
+                    if last_modified and (datetime.datetime.now() - datetimeLastModified).days < 20:
+                        return jsonify({"message": 'Bạn chỉ có thể thay đổi tên cách nhau ít nhất 20 ngày'}), 400
             sql = "update user set nickname=%s, last_modified=%s where id=%s"
             cursor.execute(sql, (nickname,
                                  datetime.datetime.now(), id))
@@ -358,11 +386,11 @@ def changeBio():
             cursor.execute(sql, (image, id))
             conn.commit()
 
-        return jsonify({'message': 'ok'}), 200
+        return jsonify({'message': 'Thay đổi thông tin thành công'}), 200
     except Exception as e:
         print(e)
         conn.rollback()
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -385,17 +413,17 @@ def changePassword():
         password = cursor.fetchone()[0]
 
         if check_password_hash(password, now) != True:
-            return {}, 500
+            return jsonify({"message": 'Mật khẩu cũ không chính xác'}), 400
 
         sql = 'update user set password=%s where id=%s'
         cursor.execute(sql, (generate_password_hash(new), id))
         conn.commit()
 
-        return jsonify({'message': 'ok'}), 200
+        return jsonify({'message': 'Thay đổi mật khẩu thành công'}), 200
     except Exception as e:
         print(e)
         conn.rollback()
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -416,39 +444,30 @@ def changeMoney():
         cursor.execute(sql, (money, id))
         conn.commit()
 
-        return jsonify({'message': 'ok'}), 200
+        return jsonify({'message': 'Cập nhật tổng số dư thành công'}), 200
     except Exception as e:
         print(e)
         conn.rollback()
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
 
 
-@app.route('/user/check-block/<string:id>', methods=['get'])
-def checkBlock(id):
+@app.route('/user/check-block/<string:blocker>/<string:blocked>', methods=['get'])
+def checkBlock(blocker, blocked):
     try:
         conn = mysql.connect()
         cursor = conn.cursor()
 
-        tk = request.cookies.get('token')
-        userId = getIdByToken(tk)
+        sql = "select count(*) from block where blocker=%s and blocked=%s"
+        cursor.execute(sql, (blocker, blocked))
+        count = cursor.fetchone()[0]
 
-        sql = "select blocked from block where blocker=%s"
-        cursor.execute(sql, (id, ))
-        blockedNames = cursor.fetchall()
-
-        isBlocked = False
-        for blockedName in blockedNames:
-            if blockedName[0] == userId:
-                isBlocked = True
-                break
-
-        return jsonify({'isBlocked': isBlocked}), 200
+        return jsonify({'isBlocked': False if count == 0 else True}), 200
     except Exception as e:
         print(e)
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -470,16 +489,42 @@ def block():
             sql = "insert into block (blocker, blocked) values (%s, %s)"
             cursor.execute(sql, (id, blockedId))
             conn.commit()
+
+            sql = "delete from follow where follower=%s and following=%s"
+            cursor.execute(sql, (blockedId, id))
+            conn.commit()
         else:
             sql = "delete from block where blocker=%s and blocked=%s"
             cursor.execute(sql, (id, blockedId))
             conn.commit()
 
-        return jsonify({'message': 'ok'}), 200
+        return jsonify({'message': 'Block hoàn tất' if isBlocked else 'Unblock hoàn tất'}), 200
     except Exception as e:
         print(e)
         conn.rollback()
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/user/check-follow/<string:id>', methods=['get'])
+def checkFollow(id):
+    try:
+        conn = mysql.connect()
+        cursor = conn.cursor()
+
+        tk = request.cookies.get('token')
+        userId = getIdByToken(tk)
+
+        sql = "select count(*) from follow where follower=%s and following=%s"
+        cursor.execute(sql, (userId, id))
+        count = cursor.fetchone()[0]
+
+        return jsonify({'isFollowed': False if count == 0 else True}), 200
+    except Exception as e:
+        print(e)
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -497,19 +542,26 @@ def follow():
         followedId = req.get('id')
         isFollowed = req.get('isFollowed')
 
+        sql = 'select count(*) from block where blocker=%s and blocked=%s'
+        cursor.execute(sql, (followedId, id))
+        count = cursor.fetchone()[0]
+
+        if count > 0:
+            return jsonify({'message': 'Bạn đã bị block bởi người dùng này, không thể follow'}), 400
+
         sql = 'select count(*) from follow where follower=%s'
         cursor.execute(sql, (id, ))
         followings = cursor.fetchone()[0]
 
         if (followings >= 20):
-            return jsonify({'message': 'max your followers'}), 500
+            return jsonify({'message': 'Bạn chỉ có thể follow tối đa 20 người'}), 400
 
         sql = 'select count(*) from follow where following=%s'
         cursor.execute(sql, (id, ))
         followers = cursor.fetchone()[0]
 
         if (followers >= 50):
-            return jsonify({'message': 'max your friend followers'}), 500
+            return jsonify({'message': 'Số người có thể follow người dùng này đã đạt tối đa'}), 400
 
         if isFollowed:
             sql = "insert into follow (follower, following) values (%s, %s)"
@@ -520,11 +572,11 @@ def follow():
             cursor.execute(sql, (id, followedId))
             conn.commit()
 
-        return jsonify({'message': 'ok'}), 200
+        return jsonify({'message': 'Follow thành công' if isFollowed else 'Unfollow thành công'}), 200
     except Exception as e:
         print(e)
         conn.rollback()
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -538,10 +590,10 @@ def logout():
 
         removeSession(id)
 
-        res = make_response(jsonify({'message': 'ok'}), 200)
+        res = make_response(jsonify({'message': 'Đăng xuất thành công'}), 200)
         res.set_cookie(
             'token', '', domain=app.config['FRONTEND'], httponly=True, expires=0)
         return res
     except Exception as e:
         print(e)
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500

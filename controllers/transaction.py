@@ -39,11 +39,11 @@ def add():
         cursor.execute(sql, (userId, ))
         conn.commit()
 
-        return jsonify({"message": 'ok'}), 200
+        return jsonify({"message": 'Thêm giao dịch thành công'}), 200
     except Exception as e:
         print(e)
         conn.rollback()
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -81,11 +81,11 @@ def edit():
         cursor.execute(sql, (changedMoney - nowMoney, userId))
         conn.commit()
 
-        return jsonify({"message": 'ok'}), 200
+        return jsonify({"message": 'Cập nhật giao dịch thành công'}), 200
     except Exception as e:
         print(e)
         conn.rollback()
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -115,11 +115,11 @@ def delete():
         cursor.execute(sql, (id, userId))
         conn.commit()
 
-        return jsonify({"message": 'ok'}), 200
+        return jsonify({"message": 'Xóa giao dịch thành công'}), 200
     except Exception as e:
         print(e)
         conn.rollback()
-        return {}, 500
+        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -148,7 +148,7 @@ def getInMonth(month, year):
         return jsonify(data), 200
     except Exception as e:
         print(e)
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin giao dịch thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -162,7 +162,7 @@ def getSeparateInMonth(month, year):
 
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
-        # print(month, year, username)
+
         sql = 'select id, money, money_type, created_at, note, image from transaction where month(created_at)=%s and year(created_at)=%s and user_id=%s order by day(created_at) desc, money_type'
         cursor.execute(sql, (month, year, userId))
         transactions = cursor.fetchall()
@@ -181,7 +181,7 @@ def getSeparateInMonth(month, year):
         return jsonify(data), 200
     except Exception as e:
         print(e)
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin giao dịch thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -194,7 +194,7 @@ def getInYear(year):
         cursor = conn.cursor()
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
-        # print(year)
+
         sql = 'SELECT money_type, sum(money) as sum FROM transaction where user_id=%s and year(created_at)=%s group by money_type order by sum desc;'
         cursor.execute(sql, (userId, year))
         transactions = cursor.fetchall()
@@ -208,7 +208,7 @@ def getInYear(year):
         return jsonify(data), 200
     except Exception as e:
         print(e)
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin giao dịch thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -240,7 +240,7 @@ def recent():
         return jsonify(data), 200
     except Exception as e:
         print(e)
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin giao dịch thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -267,7 +267,7 @@ def getById(id):
         return jsonify(transaction), 200
     except Exception as e:
         print(e)
-        return jsonify({}), 500
+        return jsonify({"message": 'Lấy thông tin giao dịch thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -294,7 +294,7 @@ def getInfinite(id, offset):
         return jsonify(data), 200
     except Exception as e:
         print(e)
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin giao dịch thất bại'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -327,7 +327,7 @@ def getDraft():
     except Exception as e:
         print(e)
         conn.rollback()
-        return jsonify([]), 500
+        return jsonify({"message": 'Lấy thông tin giao dịch nháp thất bại'}), 500
     finally:
         cursor.close()
         conn.close()

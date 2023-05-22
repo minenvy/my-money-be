@@ -2,10 +2,15 @@ from uuid import uuid4
 import json
 
 
+TokenFile = 'D:\WorkSpace\my-money\\backend\services\session\session.txt'
+
+
 def getIdByToken(tk):
-    tokenFile = open(
-        'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'r')
-    tokens = json.loads(tokenFile.read())
+    if not tk:
+        return ''
+    tokenFile = open(TokenFile, 'r')
+    jsonData = tokenFile.read()
+    tokens = json.loads(jsonData) if jsonData else {}
     tokenFile.close()
     id = None
     for x, y in tokens.items():
@@ -13,10 +18,11 @@ def getIdByToken(tk):
             id = x
     return id
 
+
 def getTokenById(id):
-    tokenFile = open(
-        'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'r')
-    tokens = json.loads(tokenFile.read())
+    tokenFile = open(TokenFile, 'r')
+    jsonData = tokenFile.read()
+    tokens = json.loads(jsonData) if jsonData else {}
     tokenFile.close()
     token = ''
     for x, y in tokens.items():
@@ -26,9 +32,9 @@ def getTokenById(id):
 
 
 def checkSession(id):
-    tokenFile = open(
-        'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'r')
-    tokens = json.loads(tokenFile.read())
+    tokenFile = open(TokenFile, 'r')
+    jsonData = tokenFile.read()
+    tokens = json.loads(jsonData) if jsonData else {}
     tokenFile.close()
     isLoggedIn = False
     for x, y in tokens.items():
@@ -38,13 +44,12 @@ def checkSession(id):
 
 
 def setNewSession(id):
-    tokenFile = open(
-        'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'r')
-    tokens = json.loads(tokenFile.read())
+    tokenFile = open(TokenFile, 'r')
+    jsonData = tokenFile.read()
+    tokens = json.loads(jsonData) if jsonData else {}
     tokenFile.close()
 
-    tokenFile = open(
-        'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'w')
+    tokenFile = open(TokenFile, 'w')
     tk = str(uuid4())
     tokens[id] = tk
     tokenFile.write(json.dumps(tokens))
@@ -53,15 +58,12 @@ def setNewSession(id):
 
 
 def removeSession(id):
-    if (not id):
-        return
-    tokenFile = open(
-        'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'r')
-    tokens = json.loads(tokenFile.read())
+    tokenFile = open(TokenFile, 'r')
+    jsonData = tokenFile.read()
+    tokens = json.loads(jsonData) if jsonData else {}
     tokenFile.close()
 
-    tokenFile = open(
-        'D:\WorkSpace\my-money\\backend\services\session\session.txt', 'w')
+    tokenFile = open(TokenFile, 'w')
     tokens.pop(id)
     tokenFile.write(json.dumps(tokens))
     tokenFile.close()
