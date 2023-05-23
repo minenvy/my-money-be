@@ -309,7 +309,7 @@ def getDraft():
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
-        sql = 'select id, money, money_type, created_at, note, image from draft_transaction where user_id=%s'
+        sql = 'select id, money, money_type, created_at, note, image, access_permission from draft_transaction where user_id=%s order by created_at desc'
         cursor.execute(sql, (userId, ))
         drafts = cursor.fetchall()
 
@@ -321,7 +321,8 @@ def getDraft():
                 "type": draft[2],
                 "createdAt": str(draft[3]),
                 "note": draft[4] or '',
-                "image": draft[5] or ''
+                "image": draft[5] or '',
+                "accessPermission": draft[6]
             })
         return jsonify(data), 200
     except Exception as e:
