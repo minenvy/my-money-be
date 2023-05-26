@@ -167,17 +167,17 @@ def getByUsername(id):
         cursor.execute(sql, (id, ))
         userData = cursor.fetchone()
 
-        sql = "select count(*) from transaction where user_id=%s group by user_id"
-        cursor.execute(sql, (id, ))
+        sql = "select count(*) from transaction where user_id=%s and access_permission=%s group by user_id"
+        cursor.execute(sql, (id, 'public'))
         transactions = cursor.fetchone()
 
         sql = "select following from follow where follower=%s"
         cursor.execute(sql, (id, ))
-        followings = cursor.fetchone()
+        followings = cursor.fetchall()
 
         sql = "select follower from follow where following=%s"
         cursor.execute(sql, (id, ))
-        followers = cursor.fetchone()
+        followers = cursor.fetchall()
 
         user = {
             "id": id,
@@ -354,13 +354,13 @@ def changeBio():
         myBio = user[1]
         myImage = user[2]
 
-        sql = 'select count(*) from user where nickname=%s'
-        cursor.execute(sql, (nickname, ))
-        isExistNickname = cursor.fetchone()[0] > 0
-        if isExistNickname:
-            return jsonify({ "message": 'Tên người dùng đã tồn tại' }), 400
-
         if (nickname and nickname != myNickname):
+            sql = 'select count(*) from user where nickname=%s'
+            cursor.execute(sql, (nickname, ))
+            count = cursor.fetchone()
+            isExistNickname = count[0] > 0 if count else False
+            if isExistNickname:
+                return jsonify({ "message": 'Tên người dùng đã tồn tại' }), 400
             if myNickname:
                 sql = "select last_modified from user where id=%s"
                 cursor.execute(sql, (id, ))
