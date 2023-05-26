@@ -18,14 +18,6 @@ def connect(data):
     userId = data.get('id')
     socketId = request.sid
     setNewSocketSession(userId, socketId)
-    print('Client connected!')
-
-
-@socketio.on('disconnect socket')
-def connect(data):
-    userId = data.get('id')
-    removeSocketSession(userId)
-    print('Client disconnected!')
 
 
 @socketio.on('new transaction')

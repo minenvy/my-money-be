@@ -43,6 +43,7 @@ def extractImage():
         filename = uploadImage(image)
         textInImage = extract(filename)
         ner = recognizeEntity(textInImage)
+
         money = ner.get('MONEY')
         date = ner.get('DATE')
         note = '"""' + ner.get('NOTE') + '"""' if ner.get('NOTE') else ''
@@ -60,8 +61,8 @@ def extractImage():
                 dateString = re.search(dayFirstRegex, date)
                 if dateString:
                     date = datetime.strptime(dateString.group(), '%d/%m/%Y') 
-        else:
-            date = datetime.now()
+                else:
+                    date = datetime.now()
 
         if note:
             textsInNote = note.split()
