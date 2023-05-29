@@ -51,7 +51,9 @@ def extractImage():
         money = re.sub("[^\d\.]", "", money.replace(
             'o', '0').replace('O', '0')) if money else 0
 
-        if date:
+        if not date:
+            date = datetime.now()
+        else:
             yearFirstRegex = '\d{4}\/\d{2}\/\d{2}|\d{4}\-\d{2}\-\d{2}'
             dayFirstRegex = '\d{2}\-\d{2}\-\d{4}|\d{2}\/\d{2}\/\d{4}'
             dateString = re.search(yearFirstRegex, date)
@@ -60,7 +62,7 @@ def extractImage():
             else:
                 dateString = re.search(dayFirstRegex, date)
                 if dateString:
-                    date = datetime.strptime(dateString.group(), '%d/%m/%Y') 
+                    date = datetime.strptime(dateString.group(), '%d/%m/%Y')
                 else:
                     date = datetime.now()
 
@@ -69,9 +71,21 @@ def extractImage():
             note = ' '.join([str(ele)
                             for ele in textsInNote]).replace('"""', '')
 
-        sql = 'insert into draft_transaction (id, user_id, money, money_type, created_at, note, image, access_permission) values (%s, %s, %s, %s, %s, %s, %s, %s)'
+        sql = 'select id, name from wallet where user_id=%s order by created_at'
+        cursor.execute(sql, (userId, ))
+        wallets = cursor.fetchall()
+        walletId = ''
+        if len(wallets) == 1:
+            walletId = wallets[0][0]
+        else:
+            for wallet in wallets:
+                if wallet[1] != 'Tiền mặt':
+                    walletId = wallet[0]
+                    break
+
+        sql = 'insert into draft_transaction (id, user_id, money, money_type, created_at, note, image, access_permission, wallet_id) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)'
         cursor.execute(sql, (uuid4(), userId, money,
-                             'banking', date, note, filename, 'private'))
+                             'banking', date, note, filename, 'private', walletId))
         conn.commit()
 
         return jsonify({'message': 'Trích xuất ảnh thành công'}), 200

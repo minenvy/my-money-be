@@ -1,7 +1,6 @@
-from flask import request, request, jsonify
+from flask import request, jsonify
 from app import app
 from services.database_config import mysql
-from dateutil import parser
 from services.session.session import getIdByToken
 
 
