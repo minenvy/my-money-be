@@ -17,7 +17,7 @@ def login():
         username = req.get('username')
         pw = req.get('password')
 
-        sql = "select id, nickname, password, money, image, bio from user where username=%s"
+        sql = "select id, nickname, password, image, bio from user where username=%s"
         cursor.execute(sql, (username, ))
         user = cursor.fetchone()
 
@@ -27,9 +27,8 @@ def login():
         id = user[0]
         nickname = user[1]
         password = user[2]
-        money = user[3]
-        image = user[4] or ''
-        bio = user[5] or ''
+        image = user[3] or ''
+        bio = user[4] or ''
         if check_password_hash(password, pw) != True:
             return jsonify({"message": 'Mật khẩu không chính xác'}), 400
 
@@ -44,7 +43,6 @@ def login():
         user = {
             "id": id,
             "nickname": nickname,
-            "money": money,
             "image": image,
             "bio": bio,
             "followings": [data[0] for data in followings] if followings else [],
@@ -86,14 +84,13 @@ def register():
         if (user):
             return jsonify({"message": 'Tài khoản đã được sử dụng'}), 400
 
-        sql = "insert into user (id, username, password, money) values (%s, %s, %s, 0)"
+        sql = "insert into user (id, username, password) values (%s, %s, %s)"
         cursor.execute(sql, (id, username, generate_password_hash
                              (password)))
         conn.commit()
 
         user = {
-            "id": id,
-            "money": 0,
+            "id": id
         }
         tk = setNewSession(id)
         res = make_response(jsonify(user), 200)
@@ -121,14 +118,13 @@ def getByToken():
         if (not id):
             return jsonify({"message": 'Lấy thông tin người dùng thất bại'}), 400
 
-        sql = "select nickname, money, image, bio from user where id=%s"
+        sql = "select nickname, image, bio from user where id=%s"
         cursor.execute(sql, (id, ))
         user = cursor.fetchone()
 
         nickname = user[0]
-        money = user[1]
-        image = user[2] or ''
-        bio = user[3] or ''
+        image = user[1] or ''
+        bio = user[2] or ''
 
         sql = "select following from follow where follower=%s"
         cursor.execute(sql, (id, ))
@@ -141,7 +137,6 @@ def getByToken():
         user = {
             "id": id,
             "nickname": nickname,
-            "money": money,
             "image": image,
             "bio": bio,
             "followings": [data[0] for data in followings] if followings else [],
@@ -360,17 +355,8 @@ def changeBio():
             count = cursor.fetchone()
             isExistNickname = count[0] > 0 if count else False
             if isExistNickname:
-                return jsonify({ "message": 'Tên người dùng đã tồn tại' }), 400
-            if myNickname:
-                sql = "select last_modified from user where id=%s"
-                cursor.execute(sql, (id, ))
-                last_modified = cursor.fetchone()[0]
-                if (last_modified):
-                    datetimeLastModified = datetime.datetime(
-                        last_modified.year, last_modified.month, last_modified.day)
+                return jsonify({"message": 'Tên người dùng đã tồn tại'}), 400
 
-                    if last_modified and (datetime.datetime.now() - datetimeLastModified).days < 20:
-                        return jsonify({"message": 'Bạn chỉ có thể thay đổi tên cách nhau ít nhất 20 ngày'}), 400
             sql = "update user set nickname=%s, last_modified=%s where id=%s"
             cursor.execute(sql, (nickname,
                                  datetime.datetime.now(), id))
@@ -420,31 +406,6 @@ def changePassword():
         conn.commit()
 
         return jsonify({'message': 'Thay đổi mật khẩu thành công'}), 200
-    except Exception as e:
-        print(e)
-        conn.rollback()
-        return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-
-@app.route('/user/change-money', methods=['post'])
-def changeMoney():
-    try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
-        tk = request.cookies.get('token')
-        id = getIdByToken(tk)
-        req = request.get_json()
-        money = req.get('money')
-
-        sql = 'update user set money=money + %s where id=%s'
-        cursor.execute(sql, (money, id))
-        conn.commit()
-
-        return jsonify({'message': 'Cập nhật tổng số dư thành công'}), 200
     except Exception as e:
         print(e)
         conn.rollback()

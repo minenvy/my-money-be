@@ -1,4 +1,4 @@
-from flask import request, request, jsonify
+from flask import request, jsonify
 from app import app
 from services.database_config import mysql
 from dateutil import parser
@@ -24,15 +24,16 @@ def add():
         date = parser.parse(req.get('createdAt'))
         image = req.get('image')
         permission = req.get('accessPermission')
+        walletId = req.get('walletId')
 
-        sql = 'insert into transaction (id, user_id, money, money_type, created_at, note, image, access_permission) values (%s, %s, %s, %s, %s, %s, %s, %s)'
+        sql = 'insert into transaction (id, user_id, money, money_type, created_at, wallet_id, note, image, access_permission) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)'
         cursor.execute(sql, (id, userId, money, moneyType,
-                       date, note, image, permission))
+                       date, walletId, note, image, permission))
         conn.commit()
 
         changedMoney = money if moneyType in incomeTypes else -money
-        sql = 'update user set money=money + %s where id=%s'
-        cursor.execute(sql, (changedMoney, userId))
+        sql = 'update wallet set total=total + %s where id=%s'
+        cursor.execute(sql, (changedMoney, walletId))
         conn.commit()
 
         sql = 'delete from draft_transaction where user_id=%s'
@@ -65,6 +66,7 @@ def edit():
         date = parser.parse(req.get('createdAt'))
         image = req.get('image')
         permission = req.get('accessPermission')
+        walletId = req.get('walletId')
 
         sql = 'select money, money_type from transaction where id=%s'
         cursor.execute(sql, (id, ))
@@ -77,8 +79,8 @@ def edit():
         conn.commit()
 
         changedMoney = money if moneyType in incomeTypes else -money
-        sql = 'update user set money=money + %s where id=%s'
-        cursor.execute(sql, (changedMoney - nowMoney, userId))
+        sql = 'update wallet set total=total + %s where id=%s'
+        cursor.execute(sql, (changedMoney - nowMoney, walletId))
         conn.commit()
 
         return jsonify({"message": 'Cập nhật giao dịch thành công'}), 200
@@ -154,8 +156,8 @@ def getInMonth(month, year):
         conn.close()
 
 
-@app.route('/transaction/get-separate-in-month/<int:month>/<int:year>', methods=['get'])
-def getSeparateInMonth(month, year):
+@app.route('/transaction/get-separate-in-month/<int:month>/<int:year>/<string:walletName>', methods=['get'])
+def getSeparateInMonth(month, year, walletName):
     try:
         conn = mysql.connect()
         cursor = conn.cursor()
@@ -163,8 +165,8 @@ def getSeparateInMonth(month, year):
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
-        sql = 'select id, money, money_type, created_at, note, image from transaction where month(created_at)=%s and year(created_at)=%s and user_id=%s order by day(created_at) desc, money_type'
-        cursor.execute(sql, (month, year, userId))
+        sql = 'select transaction.id, money, money_type, transaction.created_at, note, image, name from transaction join wallet on transaction.wallet_id = wallet.id where month(transaction.created_at)=%s and year(transaction.created_at)=%s and name=%s and transaction.user_id=%s order by day(transaction.created_at) desc, money_type'
+        cursor.execute(sql, (month, year, walletName, userId))
         transactions = cursor.fetchall()
 
         data = []
@@ -175,7 +177,8 @@ def getSeparateInMonth(month, year):
                 "type": transaction[2],
                 "createdAt": str(transaction[3]),
                 "note": transaction[4] or '',
-                "image": transaction[5] or ''
+                "image": transaction[5] or '',
+                "walletName": transaction[6]
             })
 
         return jsonify(data), 200
@@ -252,7 +255,7 @@ def getById(id):
         conn = mysql.connect()
         cursor = conn.cursor()
 
-        sql = 'select id, money, money_type, created_at, note, image from transaction where id=%s'
+        sql = 'select transaction.id, money, money_type, transaction.created_at, note, image, name, access_permission from transaction join wallet on transaction.wallet_id = wallet.id where transaction.id=%s'
         cursor.execute(sql, (id, ))
         data = cursor.fetchone()
 
@@ -262,7 +265,9 @@ def getById(id):
             "type": data[2],
             "createdAt": str(data[3]),
             "note": data[4] or '',
-            "image": data[5] or ''
+            "image": data[5] or '',
+            "walletName": data[6],
+            "accessPermission": data[7]
         }
         return jsonify(transaction), 200
     except Exception as e:
@@ -309,7 +314,7 @@ def getDraft():
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
-        sql = 'select id, money, money_type, created_at, note, image, access_permission from draft_transaction where user_id=%s order by created_at desc'
+        sql = 'select draft_transaction.id, money, money_type, draft_transaction.created_at, note, image, access_permission, name from draft_transaction join wallet on draft_transaction.wallet_id = wallet.id where draft_transaction.user_id=%s order by created_at desc'
         cursor.execute(sql, (userId, ))
         drafts = cursor.fetchall()
 
@@ -322,7 +327,8 @@ def getDraft():
                 "createdAt": str(draft[3]),
                 "note": draft[4] or '',
                 "image": draft[5] or '',
-                "accessPermission": draft[6]
+                "accessPermission": draft[6],
+                "walletName": draft[7]
             })
         return jsonify(data), 200
     except Exception as e:
