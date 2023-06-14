@@ -514,14 +514,14 @@ def follow():
         cursor.execute(sql, (id, ))
         followings = cursor.fetchone()[0]
 
-        if (followings >= 20):
-            return jsonify({'message': 'Bạn chỉ có thể follow tối đa 20 người'}), 400
+        if (followings >= 10):
+            return jsonify({'message': 'Bạn chỉ có thể follow tối đa 10 người'}), 400
 
         sql = 'select count(*) from follow where following=%s'
         cursor.execute(sql, (id, ))
         followers = cursor.fetchone()[0]
 
-        if (followers >= 50):
+        if (followers >= 10):
             return jsonify({'message': 'Số người có thể follow người dùng này đã đạt tối đa'}), 400
 
         if isFollowed:
