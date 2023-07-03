@@ -7,3 +7,5 @@ app.config['MYSQL_DATABASE_PASSWORD'] = '12345678'
 app.config['MYSQL_DATABASE_DB'] = 'my_money'
 app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 mysql.init_app(app)
+conn = mysql.connect()
+cursor = conn.cursor()

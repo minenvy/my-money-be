@@ -1,15 +1,12 @@
 from flask import request, jsonify
 from app import app
-from services.database_config import mysql
+from services.database_config import conn, cursor
 from services.session.session import getIdByToken
 
 
 @app.route('/custom-money-type/get-all', methods=['get'])
 def getCustomMoneyType():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -28,17 +25,11 @@ def getCustomMoneyType():
     except Exception as e:
         print(e)
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/custom-money-type/add', methods=['post'])
 def addCustomMoneyType():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -55,6 +46,3 @@ def addCustomMoneyType():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()

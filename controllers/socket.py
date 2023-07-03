@@ -1,7 +1,7 @@
 from flask_socketio import emit
 from app import socketio
 from flask import request
-from services.database_config import mysql
+from services.database_config import conn, cursor
 from services.socket.socket import setNewSocketSession, getSocketIdfromId, removeSocketSession
 from uuid import uuid4
 from datetime import datetime
@@ -23,9 +23,6 @@ def connect(data):
 @socketio.on('new transaction')
 def addTransactionNotification(data):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         id = data.get('id')
 
         sql = 'select nickname, image from user where id=%s'
@@ -58,17 +55,11 @@ def addTransactionNotification(data):
     except Exception as e:
         print(e)
         conn.rollback()
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @socketio.on('follow')
 def addFollowNotification(data):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         senderId = data.get('senderId')
         receiverId = data.get('receiverId')
 
@@ -95,6 +86,3 @@ def addFollowNotification(data):
     except Exception as e:
         print(e)
         conn.rollback()
-    finally:
-        cursor.close()
-        conn.close()

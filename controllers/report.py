@@ -1,15 +1,12 @@
 from flask import request, jsonify
 from app import app
-from services.database_config import mysql
+from services.database_config import conn, cursor
 from services.session.session import getIdByToken
 
 
 @app.route('/report/month/<int:year>', methods=['get'])
 def reportMonth(year):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -30,17 +27,11 @@ def reportMonth(year):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin báo cáo thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/report/year/<int:year>', methods=['get'])
 def reportYear(year):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -61,6 +52,3 @@ def reportYear(year):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin báo cáo thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()

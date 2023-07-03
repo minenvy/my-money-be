@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from app import app
-from services.database_config import mysql
+from services.database_config import conn, cursor
 from dateutil import parser
 from services.session.session import getIdByToken
 
@@ -8,9 +8,6 @@ from services.session.session import getIdByToken
 @app.route('/budget/add', methods=['post'])
 def addBudget():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
         req = request.get_json()
@@ -31,17 +28,11 @@ def addBudget():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/budget/get-infinite/<int:offset>', methods=['get'])
 def getBudget(offset):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -69,17 +60,11 @@ def getBudget(offset):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin ngân sách thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/budget/get-day-expense/<string:id>', methods=['get'])
 def getDayExpense(id):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -105,22 +90,15 @@ def getDayExpense(id):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin chi tiêu trong ngân sách thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/budget/delete', methods=['post'])
 def deleteBudget():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
         req = request.get_json()
         id = req.get('id')
-        # print(username)
 
         sql = 'delete from budget where id=%s and user_id=%s'
         cursor.execute(sql, (id, userId))
@@ -131,6 +109,3 @@ def deleteBudget():
         print(e)
         conn.rollback()
         return jsonify({}), 500
-    finally:
-        cursor.close()
-        conn.close()

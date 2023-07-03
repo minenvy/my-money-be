@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from app import app
-from services.database_config import mysql
+from services.database_config import conn, cursor
 from services.session.session import getIdByToken
 
 
@@ -13,9 +13,6 @@ message = [
 @app.route('/notification/get-infinite/<string:id>/<int:offset>', methods=['get'])
 def getInfiniteNotification(id, offset):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         sql = 'select id, sender_id, type, status, created_at from notification where receiver_id=%s order by created_at desc limit 15 offset %s'
         cursor.execute(sql, (id, offset))
         notifications = cursor.fetchall()
@@ -40,17 +37,11 @@ def getInfiniteNotification(id, offset):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin thông báo thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/notification/read', methods=['post'])
 def readNotification():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         req = request.get_json()
         id = req.get('id')
 
@@ -63,6 +54,3 @@ def readNotification():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
