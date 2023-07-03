@@ -1,6 +1,6 @@
 from flask import request, request, jsonify
 from app import app
-from services.database_config import mysql
+from services.database_config import conn, cursor
 from services.session.session import getIdByToken
 from datetime import datetime
 from uuid import uuid4
@@ -9,9 +9,6 @@ from uuid import uuid4
 @app.route('/wallet/get-all-wallet', methods=['get'])
 def getWallets():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -31,17 +28,11 @@ def getWallets():
     except Exception as e:
         print(e)
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/wallet/add', methods=['post'])
 def addWallet():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
         req = request.get_json()
@@ -65,17 +56,11 @@ def addWallet():
     except Exception as e:
         print(e)
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/wallet/delete', methods=['post'])
 def deleteWallet():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
         req = request.get_json()
@@ -90,6 +75,4 @@ def deleteWallet():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
+        

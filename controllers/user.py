@@ -1,7 +1,7 @@
 from flask import request, make_response, jsonify
 from flask_bcrypt import generate_password_hash, check_password_hash
 from app import app
-from services.database_config import mysql
+from services.database_config import conn, cursor
 from services.session.session import getIdByToken, setNewSession, removeSession, checkSession, getTokenById
 import datetime
 from services.upload_image import uploadImage
@@ -10,9 +10,6 @@ from services.upload_image import uploadImage
 @app.route('/user/login', methods=['post'])
 def login():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         req = request.get_json()
         username = req.get('username')
         pw = req.get('password')
@@ -61,17 +58,11 @@ def login():
     except Exception as e:
         print(e)
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/register', methods=['POST'])
 def register():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         req = request.get_json()
         id = req.get('id')
         username = req.get('username')
@@ -101,17 +92,11 @@ def register():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/get-by-token', methods=['get'])
 def getByToken():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         id = getIdByToken(tk)
 
@@ -147,17 +132,11 @@ def getByToken():
     except Exception as e:
         print(e)
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/get-by-id/<string:id>', methods=['get'])
 def getByUsername(id):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         sql = "select nickname, image, bio from user where id=%s"
         cursor.execute(sql, (id, ))
         userData = cursor.fetchone()
@@ -188,17 +167,11 @@ def getByUsername(id):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/get-followers/<string:id>', methods=['get'])
 def getFollowers(id):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -228,17 +201,11 @@ def getFollowers(id):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin follow thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/get-followings/<string:id>', methods=['get'])
 def getFollowings(id):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         sql = "select id, nickname, image, bio from user where id in (select following from follow where follower=%s)"
         cursor.execute(sql, (id, ))
         followings = cursor.fetchall()
@@ -258,17 +225,11 @@ def getFollowings(id):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin follow thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/get-proposers/<string:id>/<int:offset>/<string:search>', methods=['get'])
 def getSearchProposers(id, offset, search):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -291,17 +252,11 @@ def getSearchProposers(id, offset, search):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin bạn đề xuất thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/get-proposers/<string:id>/<int:offset>', methods=['get'])
 def getProposers(id, offset):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -324,17 +279,11 @@ def getProposers(id, offset):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin bạn đề xuất thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/change-profile', methods=['post'])
 def changeBio():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         id = getIdByToken(tk)
         req = request.get_json()
@@ -377,17 +326,11 @@ def changeBio():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/change-password', methods=['post'])
 def changePassword():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         id = getIdByToken(tk)
         req = request.get_json()
@@ -410,17 +353,11 @@ def changePassword():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/check-block/<string:blocker>/<string:blocked>', methods=['get'])
 def checkBlock(blocker, blocked):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         sql = "select count(*) from block where blocker=%s and blocked=%s"
         cursor.execute(sql, (blocker, blocked))
         count = cursor.fetchone()[0]
@@ -429,17 +366,11 @@ def checkBlock(blocker, blocked):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/block', methods=['post'])
 def block():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         id = getIdByToken(tk)
         req = request.get_json()
@@ -464,17 +395,11 @@ def block():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/check-follow/<string:id>', methods=['get'])
 def checkFollow(id):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -486,17 +411,11 @@ def checkFollow(id):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/follow', methods=['post'])
 def follow():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         id = getIdByToken(tk)
         req = request.get_json()
@@ -538,9 +457,6 @@ def follow():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/user/logout', methods=['get'])

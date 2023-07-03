@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from app import app
-from services.database_config import mysql
+from services.database_config import conn, cursor
 from dateutil import parser
 from services.session.session import getIdByToken
 
@@ -11,9 +11,6 @@ incomeTypes = ['luong', 'thunhapkhac']
 @app.route('/transaction/add', methods=['post'])
 def add():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
         req = request.get_json()
@@ -45,17 +42,11 @@ def add():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/transaction/edit', methods=['post'])
 def edit():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
         req = request.get_json()
@@ -88,17 +79,11 @@ def edit():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/transaction/delete', methods=['post'])
 def delete():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
         req = request.get_json()
@@ -122,20 +107,14 @@ def delete():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/transaction/get-in-month/<int:month>/<int:year>', methods=['get'])
 def getInMonth(month, year):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
-        # print(month, year, username)
+
         sql = 'SELECT money_type, sum(money) as sum FROM transaction where user_id=%s and month(created_at)=%s and year(created_at)=%s group by money_type order by sum desc'
         cursor.execute(sql, (userId, month, year))
         transactions = cursor.fetchall()
@@ -151,17 +130,11 @@ def getInMonth(month, year):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin giao dịch thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/transaction/get-separate-in-month/<int:month>/<int:year>/<string:walletName>', methods=['get'])
 def getSeparateInMonth(month, year, walletName):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -185,16 +158,11 @@ def getSeparateInMonth(month, year, walletName):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin giao dịch thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/transaction/get-in-year/<int:year>', methods=['get'])
 def getInYear(year):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -212,17 +180,11 @@ def getInYear(year):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin giao dịch thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/transaction/recent', methods=['get'])
 def recent():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -244,17 +206,11 @@ def recent():
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin giao dịch thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/transaction/get-by-id/<string:id>', methods=['get'])
 def getById(id):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         sql = 'select transaction.id, money, money_type, transaction.created_at, note, image, name, access_permission from transaction join wallet on transaction.wallet_id = wallet.id where transaction.id=%s'
         cursor.execute(sql, (id, ))
         data = cursor.fetchone()
@@ -273,17 +229,11 @@ def getById(id):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin giao dịch thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/transaction/get-infinite/<string:id>/<int:offset>', methods=['get'])
 def getInfinite(id, offset):
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         sql = 'select id, money, money_type, created_at from transaction where user_id=%s and access_permission=%s order by created_at desc limit 15 offset %s'
         cursor.execute(sql, (id, 'public', offset))
         transactions = cursor.fetchall()
@@ -300,17 +250,11 @@ def getInfinite(id, offset):
     except Exception as e:
         print(e)
         return jsonify({"message": 'Lấy thông tin giao dịch thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @app.route('/transaction/draft', methods=['get'])
 def getDraft():
     try:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
@@ -335,6 +279,3 @@ def getDraft():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Lấy thông tin giao dịch nháp thất bại'}), 500
-    finally:
-        cursor.close()
-        conn.close()
