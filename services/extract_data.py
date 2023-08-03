@@ -66,16 +66,10 @@ def standardizedEntity(money, date, note, bank):
 
 
 def getClosestWalletName(wallets, bank):
-    min = 1e9
     walletId = ''
-    bankLength = len(bank)
     for wallet in wallets:
-        distance = 0
-        for i in range(len(wallet[1])):
-            distance += abs(ord(wallet[1][i].lower()) -
-                            ord(bank[i])) if i < bankLength - 1 else 1
-        if (distance < min):
-            min = distance
+        if (wallet[1].lower() in bank):
             walletId = wallet[0]
+            break
     return walletId
         
