@@ -258,7 +258,7 @@ def getDraft():
         tk = request.cookies.get('token')
         userId = getIdByToken(tk)
 
-        sql = 'select draft_transaction.id, money, money_type, draft_transaction.created_at, note, image, access_permission, name from draft_transaction join wallet on draft_transaction.wallet_id = wallet.id where draft_transaction.user_id=%s order by created_at desc'
+        sql = 'select draft_transaction.id, money, money_type, draft_transaction.created_at, note, image, access_permission, name, wallet.id from draft_transaction join wallet on draft_transaction.wallet_id = wallet.id where draft_transaction.user_id=%s order by created_at desc'
         cursor.execute(sql, (userId, ))
         drafts = cursor.fetchall()
 
@@ -272,7 +272,8 @@ def getDraft():
                 "note": draft[4] or '',
                 "image": draft[5] or '',
                 "accessPermission": draft[6],
-                "walletName": draft[7]
+                "walletName": draft[7],
+                "walletId": draft[8]
             })
         return jsonify(data), 200
     except Exception as e:
