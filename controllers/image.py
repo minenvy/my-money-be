@@ -1,4 +1,4 @@
-from flask import request, make_response, jsonify
+from flask import request, make_response, jsonify, send_from_directory
 from app import app
 from services.database_config import conn, cursor
 from services.session.session import getIdByToken, setNewSession, removeSession
@@ -12,10 +12,10 @@ from uuid import uuid4
 def upload():
     try:
         tk = request.cookies.get('token')
-        id = getIdByToken(tk)
+        userId = getIdByToken(tk)
         image = request.files['file']
 
-        filename = uploadImage(image)
+        filename = uploadImage(userId, image)
 
         return jsonify({"message": 'Upload ảnh thành công', "image": filename}), 200
     except Exception as e:
@@ -30,7 +30,7 @@ def extractImage():
         userId = getIdByToken(tk)
         image = request.files['file']
 
-        filename = uploadImage(image)
+        filename = uploadImage(userId, image)
         textInImage = extract(filename)
         ner = recognizeEntity(textInImage)
 
@@ -59,3 +59,17 @@ def extractImage():
         print(e)
         conn.rollback()
         return jsonify({"message": 'Trích xuất ảnh thất bại'}), 500
+
+
+@app.route('/static/images/<path:path>', methods=['get'])
+def getImage(path):
+  try:
+      tk = request.cookies.get('token')
+      userId = getIdByToken(tk)
+      if (userId in path):
+        return send_from_directory('static/images', path)
+      else:
+        return jsonify({"message": 'Not have permission'}), 403 
+  except Exception as e:
+      print(e)
+      return jsonify({"message": 'Có lỗi xảy ra, vui lòng thử lại sau'}), 500 

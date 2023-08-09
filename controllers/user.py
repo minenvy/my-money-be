@@ -4,7 +4,6 @@ from app import app
 from services.database_config import conn, cursor
 from services.session.session import getIdByToken, setNewSession, removeSession, checkSession, getTokenById
 import datetime
-from services.upload_image import uploadImage
 
 
 @app.route('/user/login', methods=['post'])

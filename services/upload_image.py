@@ -9,9 +9,9 @@ def allowedFile(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def uploadImage(image):
+def uploadImage(userId, image):
     filename = ''
     if (allowedFile(image.filename)):
-        filename = secure_filename(image.filename)
+        filename = secure_filename(userId + '.' + image.filename)
         image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
     return filename
