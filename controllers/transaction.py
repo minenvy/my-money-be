@@ -211,7 +211,7 @@ def recent():
 @app.route('/transaction/get-by-id/<string:id>', methods=['get'])
 def getById(id):
     try:
-        sql = 'select transaction.id, money, money_type, transaction.created_at, note, image, name, access_permission from transaction join wallet on transaction.wallet_id = wallet.id where transaction.id=%s'
+        sql = 'select transaction.id, money, money_type, transaction.created_at, note, image, name, access_permission, wallet.id from transaction join wallet on transaction.wallet_id = wallet.id where transaction.id=%s'
         cursor.execute(sql, (id, ))
         data = cursor.fetchone()
 
@@ -223,7 +223,8 @@ def getById(id):
             "note": data[4] or '',
             "image": data[5] or '',
             "walletName": data[6],
-            "accessPermission": data[7]
+            "accessPermission": data[7],
+            "walletId": data[8]
         }
         return jsonify(transaction), 200
     except Exception as e:
